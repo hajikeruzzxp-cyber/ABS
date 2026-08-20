@@ -1,0 +1,692 @@
+-- ============================================
+-- KUYKUB HUB - Complete Script
+-- Original: RedzHub (Modified & Rebranded)
+-- Theme: Dark Blue / Black
+-- Version: 2.0
+-- ============================================
+
+local KUYKUB = {}
+KUYKUB.Version = "2.0"
+KUYKUB.Theme = "DarkBlue"
+
+-- ============================================
+-- THEME CONFIGURATION - ดำ-น้ำเงิน
+-- ============================================
+local Theme = {
+    Background = Color3.fromRGB(8, 8, 18),
+    MainColor = Color3.fromRGB(0, 130, 255),
+    SecondaryColor = Color3.fromRGB(0, 50, 160),
+    TextColor = Color3.fromRGB(180, 210, 255),
+    BorderColor = Color3.fromRGB(0, 80, 200),
+    AccentColor = Color3.fromRGB(0, 180, 255),
+    HoverColor = Color3.fromRGB(0, 150, 255),
+    DarkBg = Color3.fromRGB(15, 15, 30),
+    ButtonBg = Color3.fromRGB(0, 40, 130),
+}
+
+-- ============================================
+-- SERVICE REFERENCES
+-- ============================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+-- ============================================
+-- GLOBAL VARIABLES
+-- ============================================
+local Settings = {
+    AutoPunch = false,
+    AutoSword = false,
+    AutoFarm = false,
+    FlyMode = false,
+    GodMode = false,
+    NoClip = false,
+    ESP = false,
+    SpeedHack = false,
+    JumpHack = false,
+    AntiStun = false,
+    InfiniteStamina = false,
+    KillAll = false,
+    SpeedMultiplier = 50,
+    JumpMultiplier = 50,
+    FarmRange = 100,
+    TargetMode = "Nearest", -- "Nearest", "LowestHealth", "Random"
+}
+
+local Targets = {}
+local FarmZones = {}
+local isRunning = false
+
+-- ============================================
+-- UTILITY FUNCTIONS
+-- ============================================
+local function GetClosestPlayer()
+    local closest = nil
+    local shortestDist = math.huge
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local dist = (RootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
+            if dist < shortestDist then
+                shortestDist = dist
+                closest = player
+            end
+        end
+    end
+    return closest
+end
+
+local function GetLowestHealthPlayer()
+    local lowest = nil
+    local lowestHealth = math.huge
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
+            local health = player.Character.Humanoid.Health
+            if health < lowestHealth and health > 0 then
+                lowestHealth = health
+                lowest = player
+            end
+        end
+    end
+    return lowest
+end
+
+local function GetRandomPlayer()
+    local available = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            table.insert(available, player)
+        end
+    end
+    if #available > 0 then
+        return available[math.random(1, #available)]
+    end
+    return nil
+end
+
+local function GetTarget()
+    if Settings.TargetMode == "Nearest" then
+        return GetClosestPlayer()
+    elseif Settings.TargetMode == "LowestHealth" then
+        return GetLowestHealthPlayer()
+    elseif Settings.TargetMode == "Random" then
+        return GetRandomPlayer()
+    end
+    return GetClosestPlayer()
+end
+
+-- ============================================
+-- MAIN FUNCTIONS - KUYKUB
+-- ============================================
+
+function KUYKUB.AutoPunch()
+    Settings.AutoPunch = not Settings.AutoPunch
+    if Settings.AutoPunch then
+        print("KUYKUB: Auto Punch Enabled")
+        while Settings.AutoPunch do
+            local target = GetTarget()
+            if target and target.Character then
+                local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+                if targetRoot then
+                    RootPart.CFrame = CFrame.new(targetRoot.Position + Vector3.new(0, 2, 0))
+                    wait(0.1)
+                    -- Simulate punch (Remote Event)
+                    local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
+                    if remote then
+                        remote:FireServer("Punch", target)
+                    end
+                end
+            end
+            wait(0.2)
+        end
+    else
+        print("KUYKUB: Auto Punch Disabled")
+    end
+end
+
+function KUYKUB.AutoSword()
+    Settings.AutoSword = not Settings.AutoSword
+    if Settings.AutoSword then
+        print("KUYKUB: Auto Sword Enabled")
+        while Settings.AutoSword do
+            local target = GetTarget()
+            if target and target.Character then
+                local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+                if targetRoot then
+                    RootPart.CFrame = CFrame.new(targetRoot.Position + Vector3.new(0, 2, 0))
+                    wait(0.05)
+                    local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
+                    if remote then
+                        remote:FireServer("Sword", target)
+                    end
+                end
+            end
+            wait(0.15)
+        end
+    else
+        print("KUYKUB: Auto Sword Disabled")
+    end
+end
+
+function KUYKUB.AutoFarm(zone)
+    Settings.AutoFarm = not Settings.AutoFarm
+    if Settings.AutoFarm then
+        print("KUYKUB: Auto Farm Enabled")
+        while Settings.AutoFarm do
+            for _, mob in ipairs(workspace:GetChildren()) do
+                if mob:IsA("Model") and mob:FindFirstChild("Humanoid") then
+                    local mobHumanoid = mob.Humanoid
+                    if mobHumanoid.Health > 0 then
+                        local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+                        if mobRoot then
+                            RootPart.CFrame = CFrame.new(mobRoot.Position + Vector3.new(0, 2, 0))
+                            wait(0.1)
+                            local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
+                            if remote then
+                                remote:FireServer("Attack", mob)
+                            end
+                        end
+                    end
+                end
+            end
+            wait(0.5)
+        end
+    else
+        print("KUYKUB: Auto Farm Disabled")
+    end
+end
+
+function KUYKUB.TeleportTo(position)
+    if RootPart then
+        RootPart.CFrame = CFrame.new(position)
+        print("KUYKUB: Teleported to", position)
+    end
+end
+
+function KUYKUB.KillAll()
+    Settings.KillAll = not Settings.KillAll
+    if Settings.KillAll then
+        print("KUYKUB: Kill All Enabled")
+        while Settings.KillAll do
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
+                    if targetRoot then
+                        RootPart.CFrame = CFrame.new(targetRoot.Position + Vector3.new(0, 2, 0))
+                        wait(0.05)
+                        local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
+                        if remote then
+                            remote:FireServer("Kill", player)
+                        end
+                    end
+                end
+            end
+            wait(0.3)
+        end
+    else
+        print("KUYKUB: Kill All Disabled")
+    end
+end
+
+function KUYKUB.FlyMode()
+    Settings.FlyMode = not Settings.FlyMode
+    if Settings.FlyMode then
+        print("KUYKUB: Fly Mode Enabled")
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(1, 1, 1) * 100000
+        bodyVelocity.Velocity = Vector3.new(0, 50, 0)
+        bodyVelocity.Parent = RootPart
+        
+        local bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.MaxTorque = Vector3.new(1, 1, 1) * 100000
+        bodyGyro.CFrame = RootPart.CFrame
+        bodyGyro.Parent = RootPart
+        
+        while Settings.FlyMode do
+            local moveDirection = Vector3.new()
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + RootPart.CFrame.LookVector * 50 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - RootPart.CFrame.LookVector * 50 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - RootPart.CFrame.RightVector * 50 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + RootPart.CFrame.RightVector * 50 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 50, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDirection = moveDirection - Vector3.new(0, 50, 0) end
+            
+            bodyVelocity.Velocity = moveDirection
+            bodyGyro.CFrame = RootPart.CFrame
+            
+            wait()
+        end
+        
+        bodyVelocity:Destroy()
+        bodyGyro:Destroy()
+    else
+        print("KUYKUB: Fly Mode Disabled")
+    end
+end
+
+function KUYKUB.GodMode()
+    Settings.GodMode = not Settings.GodMode
+    if Settings.GodMode then
+        print("KUYKUB: God Mode Enabled")
+        while Settings.GodMode do
+            if Humanoid then
+                Humanoid.Health = Humanoid.MaxHealth
+                Humanoid.BreakJointsOnDeath = false
+            end
+            wait(0.1)
+        end
+    else
+        print("KUYKUB: God Mode Disabled")
+        if Humanoid then
+            Humanoid.BreakJointsOnDeath = true
+        end
+    end
+end
+
+function KUYKUB.NoClip()
+    Settings.NoClip = not Settings.NoClip
+    if Settings.NoClip then
+        print("KUYKUB: NoClip Enabled")
+        while Settings.NoClip do
+            if RootPart then
+                RootPart.CanCollide = false
+            end
+            wait()
+        end
+    else
+        print("KUYKUB: NoClip Disabled")
+        if RootPart then
+            RootPart.CanCollide = true
+        end
+    end
+end
+
+function KUYKUB.ESP()
+    Settings.ESP = not Settings.ESP
+    if Settings.ESP then
+        print("KUYKUB: ESP Enabled")
+        while Settings.ESP do
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local head = player.Character:FindFirstChild("Head")
+                    if head then
+                        local highlight = head:FindFirstChild("ESP_Highlight")
+                        if not highlight then
+                            highlight = Instance.new("Highlight")
+                            highlight.Name = "ESP_Highlight"
+                            highlight.Adornee = head
+                            highlight.FillColor = Theme.MainColor
+                            highlight.FillTransparency = 0.4
+                            highlight.OutlineColor = Theme.AccentColor
+                            highlight.OutlineTransparency = 0.2
+                            highlight.Parent = head
+                        end
+                    end
+                end
+            end
+            wait(0.5)
+        end
+    else
+        print("KUYKUB: ESP Disabled")
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Character then
+                local head = player.Character:FindFirstChild("Head")
+                if head then
+                    local highlight = head:FindFirstChild("ESP_Highlight")
+                    if highlight then
+                        highlight:Destroy()
+                    end
+                end
+            end
+        end
+    end
+end
+
+function KUYKUB.SpeedHack(multiplier)
+    Settings.SpeedHack = not Settings.SpeedHack
+    if Settings.SpeedHack then
+        print("KUYKUB: Speed Hack Enabled")
+        while Settings.SpeedHack do
+            if Humanoid then
+                Humanoid.WalkSpeed = 16 * (multiplier or Settings.SpeedMultiplier)
+            end
+            wait()
+        end
+    else
+        print("KUYKUB: Speed Hack Disabled")
+        if Humanoid then
+            Humanoid.WalkSpeed = 16
+        end
+    end
+end
+
+function KUYKUB.JumpHack(height)
+    Settings.JumpHack = not Settings.JumpHack
+    if Settings.JumpHack then
+        print("KUYKUB: Jump Hack Enabled")
+        while Settings.JumpHack do
+            if Humanoid then
+                Humanoid.JumpPower = 50 * (height or Settings.JumpMultiplier)
+            end
+            wait()
+        end
+    else
+        print("KUYKUB: Jump Hack Disabled")
+        if Humanoid then
+            Humanoid.JumpPower = 50
+        end
+    end
+end
+
+function KUYKUB.AntiStun()
+    Settings.AntiStun = not Settings.AntiStun
+    if Settings.AntiStun then
+        print("KUYKUB: Anti-Stun Enabled")
+        while Settings.AntiStun do
+            if Humanoid then
+                Humanoid.PlatformStand = false
+                Humanoid.Sit = false
+            end
+            wait(0.1)
+        end
+    else
+        print("KUYKUB: Anti-Stun Disabled")
+    end
+end
+
+function KUYKUB.InfiniteStamina()
+    Settings.InfiniteStamina = not Settings.InfiniteStamina
+    if Settings.InfiniteStamina then
+        print("KUYKUB: Infinite Stamina Enabled")
+        while Settings.InfiniteStamina do
+            local stamina = LocalPlayer:FindFirstChild("Stamina")
+            if stamina then
+                stamina.Value = stamina.MaxValue
+            end
+            wait(0.1)
+        end
+    else
+        print("KUYKUB: Infinite Stamina Disabled")
+    end
+end
+
+function KUYKUB.StealCurrency(amount)
+    local remote = ReplicatedStorage:FindFirstChild("CurrencyRemote")
+    if remote then
+        remote:FireServer("Steal", amount or 1000)
+        print("KUYKUB: Attempted to steal", amount or 1000)
+    end
+end
+
+function KUYKUB.SpawnItem(itemId)
+    local remote = ReplicatedStorage:FindFirstChild("ItemRemote")
+    if remote then
+        remote:FireServer("Spawn", itemId)
+        print("KUYKUB: Spawned item", itemId)
+    end
+end
+
+function KUYKUB.DuplicateItem(itemId)
+    local remote = ReplicatedStorage:FindFirstChild("ItemRemote")
+    if remote then
+        remote:FireServer("Duplicate", itemId)
+        print("KUYKUB: Duplicated item", itemId)
+    end
+end
+
+-- ============================================
+-- UI BUILDER - ธีมดำ-น้ำเงิน
+-- ============================================
+local function CreateUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "KUYKUB_GUI"
+    screenGui.Parent = LocalPlayer.PlayerGui
+    
+    -- Main Frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.BackgroundColor3 = Theme.Background
+    mainFrame.BorderColor3 = Theme.BorderColor
+    mainFrame.BorderSizePixel = 2
+    mainFrame.Size = UDim2.new(0, 550, 0, 650)
+    mainFrame.Position = UDim2.new(0.5, -275, 0.5, -325)
+    mainFrame.BackgroundTransparency = 0.95
+    mainFrame.Parent = screenGui
+    
+    -- Title Bar
+    local titleBar = Instance.new("Frame")
+    titleBar.BackgroundColor3 = Theme.SecondaryColor
+    titleBar.BorderColor3 = Theme.BorderColor
+    titleBar.BorderSizePixel = 1
+    titleBar.Size = UDim2.new(1, 0, 0, 45)
+    titleBar.Position = UDim2.new(0, 0, 0, 0)
+    titleBar.Parent = mainFrame
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Text = "🔷 KUYKUB HUB v2.0"
+    titleLabel.TextColor3 = Theme.TextColor
+    titleLabel.TextScaled = true
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Size = UDim2.new(1, 0, 1, 0)
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.Parent = titleBar
+    
+    -- Close Button
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Text = "✕"
+    closeBtn.TextColor3 = Theme.TextColor
+    closeBtn.BackgroundColor3 = Theme.ButtonBg
+    closeBtn.BorderColor3 = Theme.BorderColor
+    closeBtn.BorderSizePixel = 1
+    closeBtn.Size = UDim2.new(0, 40, 0, 35)
+    closeBtn.Position = UDim2.new(1, -45, 0, 5)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.Parent = titleBar
+    closeBtn.MouseButton1Click:Connect(function()
+        screenGui.Enabled = not screenGui.Enabled
+    end)
+    
+    -- Toggle Button (open/close)
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Text = "⏵"
+    toggleBtn.TextColor3 = Theme.TextColor
+    toggleBtn.BackgroundColor3 = Theme.ButtonBg
+    toggleBtn.BorderColor3 = Theme.BorderColor
+    toggleBtn.BorderSizePixel = 1
+    toggleBtn.Size = UDim2.new(0, 40, 0, 35)
+    toggleBtn.Position = UDim2.new(1, -90, 0, 5)
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.Parent = titleBar
+    toggleBtn.MouseButton1Click:Connect(function()
+        mainFrame.Visible = not mainFrame.Visible
+    end)
+    
+    -- Scroll Frame for buttons
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.BackgroundColor3 = Theme.DarkBg
+    scrollFrame.BorderColor3 = Theme.BorderColor
+    scrollFrame.BorderSizePixel = 1
+    scrollFrame.Size = UDim2.new(1, 0, 1, -45)
+    scrollFrame.Position = UDim2.new(0, 0, 0, 45)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 1200)
+    scrollFrame.ScrollBarThickness = 8
+    scrollFrame.ScrollBarImageColor3 = Theme.MainColor
+    scrollFrame.Parent = mainFrame
+    
+    local buttonY = 10
+    local buttonHeight = 40
+    local spacing = 8
+    
+    local function CreateUIButton(text, callback)
+        local btn = Instance.new("TextButton")
+        btn.Text = text
+        btn.TextColor3 = Theme.TextColor
+        btn.BackgroundColor3 = Theme.ButtonBg
+        btn.BorderColor3 = Theme.BorderColor
+        btn.BorderSizePixel = 1
+        btn.Size = UDim2.new(0.9, 0, 0, buttonHeight)
+        btn.Position = UDim2.new(0.05, 0, 0, buttonY)
+        btn.Font = Enum.Font.Gotham
+        btn.TextScaled = true
+        btn.Parent = scrollFrame
+        
+        -- Hover effect
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.HoverColor}):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.ButtonBg}):Play()
+        end)
+        
+        btn.MouseButton1Click:Connect(callback)
+        buttonY = buttonY + buttonHeight + spacing
+        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, buttonY + 20)
+        return btn
+    end
+    
+    -- Create all buttons with KUYKUB functions
+    CreateUIButton("👊 Auto Punch", KUYKUB.AutoPunch)
+    CreateUIButton("⚔️ Auto Sword", KUYKUB.AutoSword)
+    CreateUIButton("🌾 Auto Farm", KUYKUB.AutoFarm)
+    CreateUIButton("📌 Teleport", function()
+        local pos = RootPart.Position + Vector3.new(0, 50, 0)
+        KUYKUB.TeleportTo(pos)
+    end)
+    CreateUIButton("💀 Kill All", KUYKUB.KillAll)
+    CreateUIButton("✈️ Fly Mode", KUYKUB.FlyMode)
+    CreateUIButton("🛡️ God Mode", KUYKUB.GodMode)
+    CreateUIButton("🚪 NoClip", KUYKUB.NoClip)
+    CreateUIButton("👁️ ESP", KUYKUB.ESP)
+    CreateUIButton("💨 Speed Hack", function() KUYKUB.SpeedHack(100) end)
+    CreateUIButton("🦘 Jump Hack", function() KUYKUB.JumpHack(100) end)
+    CreateUIButton("⛔ Anti-Stun", KUYKUB.AntiStun)
+    CreateUIButton("⚡ Infinite Stamina", KUYKUB.InfiniteStamina)
+    CreateUIButton("💰 Steal Currency", function() KUYKUB.StealCurrency(5000) end)
+    CreateUIButton("📦 Spawn Item", function() KUYKUB.SpawnItem("LegendarySword") end)
+    CreateUIButton("🔄 Duplicate Item", function() KUYKUB.DuplicateItem("LegendarySword") end)
+    
+    -- Settings section
+    local settingsLabel = Instance.new("TextLabel")
+    settingsLabel.Text = "══════ SETTINGS ══════"
+    settingsLabel.TextColor3 = Theme.MainColor
+    settingsLabel.BackgroundTransparency = 1
+    settingsLabel.Size = UDim2.new(0.9, 0, 0, 30)
+    settingsLabel.Position = UDim2.new(0.05, 0, 0, buttonY)
+    settingsLabel.Font = Enum.Font.GothamBold
+    settingsLabel.TextScaled = true
+    settingsLabel.Parent = scrollFrame
+    buttonY = buttonY + 35
+    
+    -- Target Mode Dropdown
+    local targetLabel = Instance.new("TextLabel")
+    targetLabel.Text = "Target Mode:"
+    targetLabel.TextColor3 = Theme.TextColor
+    targetLabel.BackgroundTransparency = 1
+    targetLabel.Size = UDim2.new(0.4, 0, 0, 30)
+    targetLabel.Position = UDim2.new(0.05, 0, 0, buttonY)
+    targetLabel.Font = Enum.Font.Gotham
+    targetLabel.TextScaled = true
+    targetLabel.Parent = scrollFrame
+    
+    local targetDropdown = Instance.new("TextButton")
+    targetDropdown.Text = Settings.TargetMode
+    targetDropdown.TextColor3 = Theme.TextColor
+    targetDropdown.BackgroundColor3 = Theme.ButtonBg
+    targetDropdown.BorderColor3 = Theme.BorderColor
+    targetDropdown.BorderSizePixel = 1
+    targetDropdown.Size = UDim2.new(0.4, 0, 0, 30)
+    targetDropdown.Position = UDim2.new(0.5, 0, 0, buttonY)
+    targetDropdown.Font = Enum.Font.Gotham
+    targetDropdown.TextScaled = true
+    targetDropdown.Parent = scrollFrame
+    
+    local modes = {"Nearest", "LowestHealth", "Random"}
+    local modeIndex = 1
+    targetDropdown.MouseButton1Click:Connect(function()
+        modeIndex = modeIndex % #modes + 1
+        Settings.TargetMode = modes[modeIndex]
+        targetDropdown.Text = Settings.TargetMode
+    end)
+    buttonY = buttonY + 35
+    
+    -- Speed Slider (placeholder)
+    local speedLabel = Instance.new("TextLabel")
+    speedLabel.Text = "Speed Multiplier:"
+    speedLabel.TextColor3 = Theme.TextColor
+    speedLabel.BackgroundTransparency = 1
+    speedLabel.Size = UDim2.new(0.4, 0, 0, 30)
+    speedLabel.Position = UDim2.new(0.05, 0, 0, buttonY)
+    speedLabel.Font = Enum.Font.Gotham
+    speedLabel.TextScaled = true
+    speedLabel.Parent = scrollFrame
+    
+    local speedValue = Instance.new("TextLabel")
+    speedValue.Text = tostring(Settings.SpeedMultiplier)
+    speedValue.TextColor3 = Theme.AccentColor
+    speedValue.BackgroundTransparency = 1
+    speedValue.Size = UDim2.new(0.1, 0, 0, 30)
+    speedValue.Position = UDim2.new(0.45, 0, 0, buttonY)
+    speedValue.Font = Enum.Font.GothamBold
+    speedValue.TextScaled = true
+    speedValue.Parent = scrollFrame
+    
+    local speedSlider = Instance.new("Frame")
+    speedSlider.BackgroundColor3 = Theme.DarkBg
+    speedSlider.BorderColor3 = Theme.BorderColor
+    speedSlider.BorderSizePixel = 1
+    speedSlider.Size = UDim2.new(0.35, 0, 0, 10)
+    speedSlider.Position = UDim2.new(0.55, 0, 0, buttonY + 10)
+    speedSlider.Parent = scrollFrame
+    
+    local speedFill = Instance.new("Frame")
+    speedFill.BackgroundColor3 = Theme.MainColor
+    speedFill.Size = UDim2.new(0.5, 0, 1, 0)
+    speedFill.Parent = speedSlider
+    buttonY = buttonY + 40
+    
+    -- Credits
+    local creditLabel = Instance.new("TextLabel")
+    creditLabel.Text = "KUYKUB HUB | Freedom of Information"
+    creditLabel.TextColor3 = Theme.SecondaryColor
+    creditLabel.BackgroundTransparency = 1
+    creditLabel.Size = UDim2.new(1, 0, 0, 25)
+    creditLabel.Position = UDim2.new(0, 0, 0, buttonY)
+    creditLabel.Font = Enum.Font.Gotham
+    creditLabel.TextScaled = true
+    creditLabel.Parent = scrollFrame
+    
+    return screenGui
+end
+
+-- ============================================
+-- INITIALIZATION
+-- ============================================
+print("═══════════════════════════════════════")
+print("🔷 KUYKUB HUB v2.0 LOADED")
+print("🔷 Theme: Dark Blue / Black")
+print("🔷 Status: Ready")
+print("═══════════════════════════════════════")
+
+-- Create UI
+local gui = CreateUI()
+
+-- Hotkey: Toggle UI with Insert key
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Insert then
+        gui.Enabled = not gui.Enabled
+    end
+end)
+
+-- ============================================
+-- EXPORT - ให้เรียกใช้จากคอนโซลหรือสคริปต์อื่น
+-- ============================================
+_G.KUYKUB = KUYKUB
+
+print("✅ KUYKUB HUB is ready! Press INSERT to toggle UI")
